@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roosevelt Boulevard Subway — Full Evaluation</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --sidebar-dark:#1c2b1e;
+  --sidebar-mid:#243026;
+  --accent:#3ecfb2;
+  --accent2:#5ba3e8;
+  --accent3:#e8a84a;
+  --text-light:#e8ede9;
+  --text-muted:rgba(232,237,233,0.55);
+  --text-muted2:rgba(232,237,233,0.35);
+  --card-bg:#2d3d30;
+  --card-border:rgba(62,207,178,0.18);
+  --right-bg:#f8f9f8;
+  --right-card:#ffffff;
+  --right-border:#e4e8e4;
+  --right-text:#1a2b1c;
+  --right-muted:#6b7e6d;
+  --serif:'Lora',Georgia,serif;
+  --sans:'Inter',system-ui,sans-serif;
+  --mono:'DM Mono',monospace;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);}
+
+/* ── SHELL ── */
+.shell{display:flex;height:100vh;width:100vw;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:260px;flex-shrink:0;
+  background:var(--sidebar-dark);
+  display:flex;flex-direction:column;
+  padding:28px 24px 24px;
+  position:relative;z-index:10;
+  overflow:hidden;
+}
+.sidebar::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,transparent,rgba(62,207,178,0.3) 30%,rgba(62,207,178,0.3) 70%,transparent);
+}
+.sb-top{flex:1;}
+.sb-counter{
+  font-family:var(--mono);font-size:11px;color:var(--text-muted2);
+  letter-spacing:.06em;margin-bottom:14px;
+}
+.sb-type-tag{
+  display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:var(--accent);border:1px solid rgba(62,207,178,0.4);
+  padding:3px 10px;border-radius:3px;margin-bottom:20px;
+}
+.sb-type-tag.intro-tag{color:#c8e6c9;border-color:rgba(200,230,201,0.3);}
+.sb-type-tag.map-tag{color:var(--accent);border-color:rgba(62,207,178,0.4);}
+.sb-type-tag.chart-tag{color:var(--accent3);border-color:rgba(232,168,74,0.4);}
+.sb-type-tag.score-tag{color:var(--accent2);border-color:rgba(91,163,232,0.4);}
+.sb-title{
+  font-family:var(--serif);font-size:26px;font-weight:400;
+  color:var(--text-light);line-height:1.2;margin-bottom:14px;
+}
+.sb-desc{font-size:12px;color:var(--text-muted);line-height:1.7;margin-bottom:18px;}
+.sb-callout{
+  border-left:2px solid rgba(62,207,178,0.5);
+  padding-left:12px;font-size:11px;color:var(--text-muted);
+  line-height:1.7;margin-bottom:16px;font-family:var(--mono);
+}
+.sb-label{font-family:var(--mono);font-size:10px;color:var(--text-muted2);letter-spacing:.1em;margin-bottom:8px;}
+.sb-select{
+  width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(62,207,178,0.25);
+  color:var(--text-light);font-size:12px;font-family:var(--sans);
+  padding:7px 10px;border-radius:4px;margin-bottom:12px;cursor:pointer;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233ecfb2'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  padding-right:28px;
+}
+.sb-bottom{border-top:1px solid rgba(62,207,178,0.12);padding-top:16px;}
+.sb-section-nav{display:flex;flex-direction:column;gap:4px;margin-bottom:14px;}
+.sb-nav-item{
+  font-size:11px;color:var(--text-muted2);padding:4px 8px;
+  border-radius:3px;cursor:pointer;transition:.15s;letter-spacing:.02em;
+  display:flex;align-items:center;gap:8px;
+}
+.sb-nav-item:hover{color:var(--text-light);background:rgba(255,255,255,0.06);}
+.sb-nav-item.active{color:var(--accent);background:rgba(62,207,178,0.1);}
+.sb-nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow:hidden;position:relative;}
+.page{
+  position:absolute;inset:0;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+  overflow-y:auto;
+}
+.page.active{opacity:1;pointer-events:all;}
+
+/* full-area map pages */
+.page.map-page{overflow:hidden;}
+.map-page iframe{width:100%;height:100%;border:none;display:block;}
+
+/* content pages */
+.content-page{
+  background:var(--right-bg);
+  padding:0;height:100%;overflow-y:auto;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  position:fixed;bottom:0;right:0;z-index:100;
+  display:flex;gap:8px;padding:16px 24px;
+}
+.nav-btn{
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:9px 20px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(62,207,178,0.35);
+  background:rgba(28,43,30,0.92);
+  color:var(--text-light);backdrop-filter:blur(8px);
+  transition:.15s;letter-spacing:.01em;
+}
+.nav-btn:hover{background:rgba(62,207,178,0.15);border-color:var(--accent);}
+.nav-btn:active{transform:scale(.98);}
+
+/* ── INTRO PAGES ── */
+.intro-inner{padding:48px 52px;max-width:1100px;}
+.intro-tag{
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  color:var(--accent);margin-bottom:10px;
+}
+.intro-h1{
+  font-family:var(--serif);font-size:38px;font-weight:400;
+  color:var(--right-text);line-height:1.15;margin-bottom:20px;
+}
+.intro-lead{font-size:14px;color:var(--right-muted);line-height:1.75;max-width:680px;margin-bottom:36px;}
+
+/* stat row */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px;}
+.stat-card{
+  background:var(--right-card);border:1px solid var(--right-border);
+  border-radius:10px;padding:18px 16px;
+}
+.stat-val{font-size:28px;font-weight:600;color:var(--accent);line-height:1;margin-bottom:4px;}
+.stat-label{font-size:12px;font-weight:500;color:var(--right-text);margin-bottom:3px;}
+.stat-sub{font-size:11px;color:var(--right-muted);line-height:1.5;}
+
+/* two-col layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.card{
+  background:var(--right-card);border:1px solid var(--right-border);
+  border-radius:10px;padding:22px;
+}
+.card h3{font-size:14px;font-weight:600;color:var(--right-text);margin-bottom:10px;}
+.card p{font-size:13px;color:var(--right-muted);line-height:1.7;}
+.card-accent{border-left:3px solid var(--accent);}
+.card-blue{border-left:3px solid var(--accent2);}
+.card-amber{border-left:3px solid var(--accent3);}
+
+/* timeline */
+.timeline{display:flex;align-items:flex-start;gap:0;margin-top:16px;}
+.tl-item{flex:1;position:relative;}
+.tl-line{height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));margin:10px 0;position:relative;}
+.tl-dot{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;border-radius:50%;border:2px solid var(--right-card);
+}
+.tl-dot.d1{left:0;background:var(--accent);}
+.tl-dot.d2{left:50%;background:#9ecfb2;}
+.tl-dot.d3{right:-7px;background:var(--accent2);}
+.tl-year{font-size:20px;font-weight:600;color:var(--right-text);}
+.tl-title{font-size:12px;font-weight:600;color:var(--right-text);margin-top:4px;}
+.tl-desc{font-size:11px;color:var(--right-muted);line-height:1.5;margin-top:3px;}
+
+/* question grid */
+.q-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;}
+.q-card{
+  background:rgba(28,43,30,0.06);border:1px solid var(--right-border);
+  border-radius:8px;padding:14px;
+}
+.q-card h4{font-size:12px;font-weight:600;color:var(--right-text);margin-bottom:6px;}
+.q-card p{font-size:11px;color:var(--right-muted);line-height:1.6;}
+.q-card.featured{background:var(--right-text);color:white;}
+.q-card.featured h4,.q-card.featured p{color:rgba(255,255,255,0.8);}
+.q-card.featured h4{color:white;font-size:15px;font-weight:600;}
+.q-num{font-family:var(--mono);font-size:10px;color:var(--right-muted);margin-bottom:6px;}
+
+/* list rows with arrow */
+.link-list{display:flex;flex-direction:column;gap:6px;margin-top:14px;}
+.link-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;background:var(--right-bg);border:1px solid var(--right-border);
+  border-radius:8px;cursor:pointer;transition:.15s;text-decoration:none;color:inherit;
+}
+.link-row:hover{background:var(--right-card);border-color:var(--accent);}
+.link-row-left{display:flex;align-items:center;gap:12px;}
+.link-row-num{font-family:var(--mono);font-size:11px;color:var(--right-muted);width:24px;}
+.link-row-title{font-size:13px;font-weight:500;color:var(--right-text);}
+.link-row-sub{font-size:11px;color:var(--right-muted);}
+.link-row-arrow{font-size:14px;color:var(--right-muted);}
+
+/* section chapter intro */
+.chapter-banner{
+  background:linear-gradient(135deg,#1c2b1e 0%,#2d4030 100%);
+  padding:52px 52px 48px;color:var(--text-light);
+  border-bottom:1px solid rgba(62,207,178,0.15);
+}
+.chapter-num{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;margin-bottom:12px;}
+.chapter-h{font-family:var(--serif);font-size:34px;font-weight:400;line-height:1.2;margin-bottom:14px;}
+.chapter-lead{font-size:14px;color:var(--text-muted);line-height:1.75;max-width:660px;}
+.chapter-body{padding:36px 52px;}
+
+/* method cards */
+.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+.method-card{background:var(--right-card);border:1px solid var(--right-border);border-radius:10px;padding:18px;}
+.method-card .mc-num{font-family:var(--mono);font-size:10px;color:var(--right-muted);margin-bottom:8px;}
+.method-card h4{font-size:13px;font-weight:600;color:var(--right-text);margin-bottom:7px;}
+.method-card p{font-size:11px;color:var(--right-muted);line-height:1.65;}
+.method-tag{
+  display:inline-block;font-family:var(--mono);font-size:10px;
+  background:#f0f4f0;color:var(--right-muted);
+  padding:2px 8px;border-radius:12px;margin-top:8px;margin-right:4px;
+}
+
+/* findings */
+.finding-row{
+  display:flex;align-items:flex-start;gap:20px;
+  padding:18px 0;border-bottom:1px solid var(--right-border);
+}
+.finding-row:last-child{border-bottom:none;}
+.finding-num{
+  font-family:var(--serif);font-size:40px;font-weight:400;
+  color:var(--right-border);line-height:1;flex-shrink:0;width:50px;
+}
+.finding-body h4{font-size:14px;font-weight:600;color:var(--right-text);margin-bottom:6px;}
+.finding-body p{font-size:13px;color:var(--right-muted);line-height:1.7;}
+.finding-stat{
+  margin-top:8px;padding:8px 12px;background:var(--right-bg);
+  border-radius:6px;display:inline-block;
+}
+.finding-stat .fv{font-size:18px;font-weight:600;color:var(--right-text);}
+.finding-stat .fl{font-family:var(--mono);font-size:10px;color:var(--right-muted);letter-spacing:.04em;display:block;margin-top:1px;}
+
+/* station table */
+.station-wrap{background:var(--right-card);border:1px solid var(--right-border);border-radius:10px;overflow:hidden;}
+.stn-table{width:100%;border-collapse:collapse;}
+.stn-table th{
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  color:var(--right-muted);text-align:left;padding:10px 14px;
+  background:var(--right-bg);border-bottom:1px solid var(--right-border);
+  cursor:pointer;white-space:nowrap;
+}
+.stn-table th:hover,.stn-table th.sorted{color:var(--right-text);}
+.stn-table td{padding:10px 14px;border-bottom:1px solid var(--right-border);font-size:12px;vertical-align:middle;}
+.stn-table tr:last-child td{border-bottom:none;}
+.stn-table tr:hover td{background:var(--right-bg);}
+.stn-name{font-weight:600;font-size:13px;color:var(--right-text);}
+.stn-seg{font-family:var(--mono);font-size:10px;color:var(--right-muted);display:block;margin-top:2px;}
+.mini-bar-wrap{display:flex;align-items:center;gap:6px;}
+.mini-bar{height:5px;border-radius:3px;min-width:3px;}
+.sc-num{font-size:11px;color:var(--right-muted);width:26px;text-align:right;}
+.tier-pill{
+  font-family:var(--mono);font-size:9px;letter-spacing:.03em;
+  padding:3px 9px;border-radius:20px;white-space:nowrap;
+}
+.th{background:#d4f5ec;color:#0a5c42;}
+.tm{background:#fdebd0;color:#7a4a08;}
+.tl{background:#fad7d0;color:#8a2010;}
+.score-big{font-size:16px;font-weight:600;color:var(--right-text);}
+
+/* drawer */
+.drawer{
+  background:var(--right-bg);border-top:2px solid var(--accent);
+  padding:20px 22px;display:none;
+}
+.drawer.open{display:block;}
+.drawer-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.drawer-name{font-family:var(--serif);font-size:22px;color:var(--right-text);}
+.drawer-composite{font-family:var(--mono);font-size:11px;color:var(--right-muted);}
+.drawer-dims{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.dim-box{background:var(--right-card);border:1px solid var(--right-border);border-radius:8px;padding:14px;}
+.dim-box .db-cat{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--right-muted);margin-bottom:6px;}
+.dim-box .db-bar{height:3px;border-radius:2px;margin-bottom:7px;}
+.dim-box .db-score{font-size:20px;font-weight:600;margin-bottom:5px;}
+.dim-box .db-facts{font-size:11px;color:var(--right-muted);line-height:1.65;}
+.drawer-insight{
+  font-size:12px;color:var(--right-muted);line-height:1.75;
+  border-left:2px solid var(--accent);padding-left:12px;
+}
+.drawer-close{font-family:var(--mono);font-size:10px;color:var(--right-muted);cursor:pointer;float:right;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <div class="sb-top">
+    <div class="sb-counter" id="sb-counter">00 / 12</div>
+    <div id="sb-tag" class="sb-type-tag intro-tag">INTRO</div>
+    <div class="sb-title" id="sb-title">Roosevelt Boulevard Subway</div>
+    <div class="sb-desc" id="sb-desc">Evaluating the proposed subway option through sustainability, economic development, and public health.</div>
+    <div id="sb-extra"></div>
+  </div>
+  <div class="sb-bottom">
+    <div class="sb-section-nav">
+      <div class="sb-nav-item active" onclick="jumpTo(0)" id="nav0"><span class="sb-nav-dot"></span>Introduction</div>
+      <div class="sb-nav-item" onclick="jumpTo(2)" id="nav2"><span class="sb-nav-dot"></span>Sustainability</div>
+      <div class="sb-nav-item" onclick="jumpTo(6)" id="nav6"><span class="sb-nav-dot"></span>Economic Dev.</div>
+      <div class="sb-nav-item" onclick="jumpTo(9)" id="nav9"><span class="sb-nav-dot"></span>Public Health</div>
+      <div class="sb-nav-item" onclick="jumpTo(11)" id="nav11"><span class="sb-nav-dot"></span>Impact Score</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- PAGE 0: Hero / Title -->
+  <div class="page active" id="page0">
+    <div class="content-page">
+      <div style="background:linear-gradient(135deg,#101e12 0%,#1c3020 50%,#0f2a20 100%);min-height:100vh;display:flex;align-items:center;padding:60px 64px;gap:60px;">
+        <div style="flex:1;max-width:520px;">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.14em;margin-bottom:20px;">ROOSEVELT BOULEVARD · PHILADELPHIA</div>
+          <h1 style="font-family:var(--serif);font-size:54px;font-weight:400;color:var(--text-light);line-height:1.05;margin-bottom:20px;">Roosevelt Boulevard Subway Proposal:<br><em style="color:var(--accent)">Evaluation &amp; Visualization</em></h1>
+          <p style="font-size:15px;color:var(--text-muted);line-height:1.75;margin-bottom:32px;">Evaluating the proposed subway option through sustainability, economic development, and public health — for all 12 proposed station areas along Northeast Philadelphia's most complex corridor.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <span style="font-family:var(--mono);font-size:11px;padding:6px 16px;border:1px solid rgba(62,207,178,0.4);border-radius:20px;color:var(--accent);">QIANMU ZHENG</span>
+            <span style="font-family:var(--mono);font-size:11px;padding:6px 16px;border:1px solid rgba(62,207,178,0.4);border-radius:20px;color:var(--accent);">SAM SEN</span>
+            <span style="font-family:var(--mono);font-size:11px;padding:6px 16px;border:1px solid rgba(62,207,178,0.4);border-radius:20px;color:var(--accent);">XIAO YU</span>
+          </div>
+          <div style="margin-top:32px;font-family:var(--mono);font-size:10px;color:var(--text-muted2);letter-spacing:.08em;">MUSA · UNIVERSITY OF PENNSYLVANIA · 2025</div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:480px;">
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(62,207,178,0.15);border-radius:12px;padding:22px;">
+            <div style="font-size:32px;font-weight:600;color:var(--accent);line-height:1;">12</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Stations analyzed</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Broad-Erie → Old Lincoln</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(62,207,178,0.15);border-radius:12px;padding:22px;">
+            <div style="font-size:32px;font-weight:600;color:var(--accent);line-height:1;">3</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Evaluation dimensions</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Sustainability · Economic · Health</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(62,207,178,0.15);border-radius:12px;padding:22px;">
+            <div style="font-size:32px;font-weight:600;color:var(--accent);line-height:1;">~15</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Mile corridor</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">North Philly to Bucks County</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(62,207,178,0.15);border-radius:12px;padding:22px;">
+            <div style="font-size:32px;font-weight:600;color:var(--accent);line-height:1;">81K</div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Residents served</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Within 10-min walksheds</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 1: Project Logic -->
+  <div class="page" id="page1">
+    <div class="content-page">
+      <div class="intro-inner">
+        <div class="intro-tag">PROJECT LOGIC</div>
+        <h1 class="intro-h1">Why evaluate the subway option?</h1>
+        <div class="two-col">
+          <div class="card card-accent">
+            <h3>Project Focus</h3>
+            <p>We evaluate a <strong>proposed subway option</strong> along Roosevelt Boulevard. By 2040, the boulevard will be redesigned with one major transit mode — BRT, light rail, or subway — but the decision is still <strong>undetermined</strong>.<br><br>Our goal is to assess the overall impacts of the subway option and provide clear, objective evidence for decision-making.</p>
+            <div style="margin-top:16px;">
+              <div style="font-size:12px;font-weight:600;color:var(--right-text);margin-bottom:8px;">Route for Change Timeline</div>
+              <div class="timeline">
+                <div class="tl-item">
+                  <div class="tl-line"><div class="tl-dot d1"></div><div class="tl-dot d2"></div><div class="tl-dot d3"></div></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;">
+                    <div><div class="tl-year">2026</div><div class="tl-title">Today</div><div class="tl-desc">Safety &amp; transit upgrades</div></div>
+                    <div><div class="tl-year">2029</div><div class="tl-title">Tomorrow</div><div class="tl-desc">Improved crossings, sidewalks</div></div>
+                    <div><div class="tl-year">2040</div><div class="tl-title">Reimagined</div><div class="tl-desc">Major transit corridor decided</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Key Questions Addressed</h3>
+            <p style="margin-bottom:12px;"><strong>1. Will daily life actually improve?</strong><br>How many neighborhoods benefit? What are the overall effects?</p>
+            <p><strong>2. Are benefits equitably distributed?</strong><br>Who benefits from these improvements? Are underserved communities included?</p>
+            <div class="q-grid" style="margin-top:16px;">
+              <div class="q-card"><div class="q-num">01</div><h4>Sustainability Assessment</h4><p>Green access, VMT reduction, environmental equity</p></div>
+              <div class="q-card"><div class="q-num">02</div><h4>Economic Development</h4><p>Commercial vitality &amp; TOD opportunity</p></div>
+              <div class="q-card" style="background:var(--right-text);"><div class="q-num" style="color:rgba(255,255,255,0.4);">03</div><h4 style="color:white;">Public Health</h4><p style="color:rgba(255,255,255,0.65);">SVI, crash safety, healthcare access</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: Sustainability Intro -->
+  <div class="page" id="page2">
+    <div class="content-page">
+      <div class="chapter-banner">
+        <div class="chapter-num">PART 01 · SUSTAINABILITY</div>
+        <div class="chapter-h">Evaluating the subway proposal<br>through green access and equity.</div>
+        <div class="chapter-lead">Comparing the existing bus-only condition with the proposed subway condition, then identifying priority tracts for future investment.</div>
+      </div>
+      <div class="chapter-body">
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-card"><div class="stat-val">52</div><div class="stat-label">Subway-served tracts</div><div class="stat-sub">Tracts intersecting a 10-min walk of subway stations</div></div>
+          <div class="stat-card"><div class="stat-val">81,706</div><div class="stat-label">Population served</div><div class="stat-sub">Residents gaining subway walking access</div></div>
+          <div class="stat-card"><div class="stat-val">20,772</div><div class="stat-label">Low-income served</div><div class="stat-sub">Low-income residents within subway service area</div></div>
+          <div class="stat-card"><div class="stat-val">0.86 km²</div><div class="stat-label">Accessible green space</div><div class="stat-sub">Green space reachable within subway service area</div></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <h3>Analysis logic</h3>
+            <div class="link-list" style="margin-top:0;">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--right-border);">
+                <div style="width:28px;height:28px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2e7d32;flex-shrink:0;">1</div>
+                <div><div style="font-size:13px;font-weight:500;color:var(--right-text);">Bus-only baseline</div><div style="font-size:11px;color:var(--right-muted);">Maps 1–2: current condition without the new subway</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--right-border);">
+                <div style="width:28px;height:28px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2e7d32;flex-shrink:0;">2</div>
+                <div><div style="font-size:13px;font-weight:500;color:var(--right-text);">Subway scenario</div><div style="font-size:11px;color:var(--right-muted);">Maps 3–4: green access &amp; population served after subway</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 0;">
+                <div style="width:28px;height:28px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#2e7d32;flex-shrink:0;">3</div>
+                <div><div style="font-size:13px;font-weight:500;color:var(--right-text);">Investment priority</div><div style="font-size:11px;color:var(--right-muted);">Map 5: identify where to prioritize investment first</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Open map pages</h3>
+            <div class="link-list" style="margin-top:0;">
+              <div class="link-row" onclick="goTo(3)"><div class="link-row-left"><span class="link-row-num">01</span><div><div class="link-row-title">Bus Base Map</div><div class="link-row-sub">Existing bus condition</div></div></div><span class="link-row-arrow">→</span></div>
+              <div class="link-row" onclick="goTo(4)"><div class="link-row-left"><span class="link-row-num">02</span><div><div class="link-row-title">Bus Service Metrics</div><div class="link-row-sub">Bus-only accessibility and equity metrics</div></div></div><span class="link-row-arrow">→</span></div>
+              <div class="link-row" onclick="goTo(5)"><div class="link-row-left"><span class="link-row-num">03–05</span><div><div class="link-row-title">Subway Maps &amp; Priority Score</div><div class="link-row-sub">Subway service metrics and investment ranking</div></div></div><span class="link-row-arrow">→</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 3: Sustainability Map 1 (Bus Base) -->
+  <div class="page map-page" id="page3">
+    <iframe src="https://xqdqc-hub.github.io/practicum_final/html/bus_base_map.html" loading="lazy" title="Bus Base Map"></iframe>
+  </div>
+
+  <!-- PAGE 4: Sustainability Map 2 (Bus Metrics) -->
+  <div class="page map-page" id="page4">
+    <iframe src="https://xqdqc-hub.github.io/practicum_final/html/bus_service_map.html" loading="lazy" title="Bus Service Metrics"></iframe>
+  </div>
+
+  <!-- PAGE 5: Sustainability Maps 3–5 (Subway) -->
+  <div class="page map-page" id="page5">
+    <iframe src="https://xqdqc-hub.github.io/practicum_final/html/subway_base_map.html" loading="lazy" title="Subway Maps"></iframe>
+  </div>
+
+  <!-- PAGE 6: Economic Dev Intro -->
+  <div class="page" id="page6">
+    <div class="content-page">
+      <div class="chapter-banner" style="background:linear-gradient(135deg,#1a1f2e 0%,#222d3e 100%);">
+        <div class="chapter-num" style="color:var(--accent3);">PART 02 · ECONOMIC DEVELOPMENT</div>
+        <div class="chapter-h">Commercial vitality and<br>transit-oriented development.</div>
+        <div class="chapter-lead">Mapping the existing retail ecosystem and identifying vacant parcels near each proposed station where development could realistically occur.</div>
+      </div>
+      <div class="chapter-body">
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent3);">1,579</div><div class="stat-label">OSM commercial POIs</div><div class="stat-sub">Food + retail within all station walksheds</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent3);">320</div><div class="stat-label">City food licenses</div><div class="stat-sub">Active OpenData Philly business licenses</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent3);">389</div><div class="stat-label">Dev-potential parcels</div><div class="stat-sub">Vacant, CMX/RM/CA/Industrial zoned</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent3);">~61 ac</div><div class="stat-label">Developable land</div><div class="stat-sub">Total within 10-min walksheds</div></div>
+        </div>
+        <div class="method-grid">
+          <div class="method-card">
+            <div class="mc-num">DATA SOURCE 01</div>
+            <h4>OpenStreetMap POIs</h4>
+            <p>Restaurants, cafes, bars, fast food, bakeries, and retail shops downloaded via OSMnx for the full corridor.</p>
+            <span class="method-tag">OSMnx</span><span class="method-tag">10-min walkshed</span>
+          </div>
+          <div class="method-card">
+            <div class="mc-num">DATA SOURCE 02</div>
+            <h4>OpenData Philly Licenses</h4>
+            <p>Active food establishment licenses from the City, filtered to remove closed and expired records.</p>
+            <span class="method-tag">OpenData Philly</span><span class="method-tag">Active only</span>
+          </div>
+          <div class="method-card">
+            <div class="mc-num">DATA SOURCE 03</div>
+            <h4>Philadelphia OPA Parcels</h4>
+            <p>583,000+ parcels citywide with geometry, zoning code, and assessed value — filtered to 42,387 vacant land parcels.</p>
+            <span class="method-tag">OPA dataset</span><span class="method-tag">CMX · RM · CA · I</span>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card card-amber">
+            <h3>Commercial findings</h3>
+            <p><strong>Broad-Erie</strong> has the highest food + retail density in the corridor. <strong>Bustleton, Rising Sun,</strong> and <strong>Cottman</strong> each have 40+ active food licenses — a strong existing commercial base that subway would amplify.</p>
+          </div>
+          <div class="card card-amber">
+            <h3>Development highlights</h3>
+            <p><strong>Broad-Erie:</strong> 332 dev-potential parcels, 22.5 acres.<br><strong>Adams:</strong> 8.5-acre industrial site at 5525 Whitaker Ave (I2 zone).<br><strong>Total corridor:</strong> 389 parcels, ~61 acres of opportunity.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 7: Economic Map — Commercial -->
+  <div class="page map-page" id="page7">
+    <iframe src="https://xqdqc-hub.github.io/practicum_final/html/commercial_map.html" loading="lazy" title="Commercial Business Map"></iframe>
+  </div>
+
+  <!-- PAGE 8: Economic Map — Development Parcels -->
+  <div class="page map-page" id="page8">
+    <iframe src="https://xqdqc-hub.github.io/practicum_final/html/development_map.html" loading="lazy" title="Development Parcels Map"></iframe>
+  </div>
+
+  <!-- PAGE 9: Public Health Intro -->
+  <div class="page" id="page9">
+    <div class="content-page">
+      <div class="chapter-banner" style="background:linear-gradient(135deg,#1a1525 0%,#251e35 100%);">
+        <div class="chapter-num" style="color:var(--accent2);">PART 03 · PUBLIC HEALTH</div>
+        <div class="chapter-h">Where is the need greatest,<br>and who would this actually help?</div>
+        <div class="chapter-lead">Evaluating social vulnerability, crash exposure, and healthcare access across 12 proposed station walksheds to identify where subway delivers the greatest equity benefit.</div>
+      </div>
+      <div class="chapter-body">
+        <div class="stat-row" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent2);">10 / 12</div><div class="stat-label">High-SVI stations</div><div class="stat-sub">SVI above 0.75 — highest social vulnerability</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent2);">0.975</div><div class="stat-label">Broad-Erie SVI</div><div class="stat-sub">Highest in the entire corridor</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent2);">18</div><div class="stat-label">Bustleton crashes</div><div class="stat-sub">Serious/fatal 2024 — 3× corridor mean</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:var(--accent2);">2.42 km</div><div class="stat-label">Max HC distance</div><div class="stat-sub">Southampton — farthest from any facility</div></div>
+        </div>
+        <div class="method-grid">
+          <div class="method-card">
+            <div class="mc-num">INDICATOR 01</div>
+            <h4>Social Vulnerability Index</h4>
+            <p>CDC SVI 2022 scores by census tract within each walkshed. Higher values indicate greater vulnerability — fewer resources to cope with external stressors.</p>
+            <span class="method-tag">CDC/ATSDR SVI 2022</span><span class="method-tag">PA Census Tracts</span>
+          </div>
+          <div class="method-card">
+            <div class="mc-num">INDICATOR 02</div>
+            <h4>Crash Hotspot Analysis</h4>
+            <p>Serious and fatal crashes (severity ≤ 2) within each station's 10-minute walkshed. Reduced car dependency yields direct safety co-benefits.</p>
+            <span class="method-tag">PennDOT 2024</span><span class="method-tag">Philadelphia County</span>
+          </div>
+          <div class="method-card">
+            <div class="mc-num">INDICATOR 03</div>
+            <h4>Healthcare Access</h4>
+            <p>Straight-line distance from each proposed station to the nearest hospital, clinic, or pharmacy. Greater distance = worse access for car-free residents.</p>
+            <span class="method-tag">OSM Healthcare</span><span class="method-tag">Haversine distance</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Key findings</h3>
+          <div class="finding-row">
+            <div class="finding-num">01</div>
+            <div class="finding-body"><h4>Inner stations carry the heaviest burden</h4><p>Broad-Erie (0.975) and North 9th (0.953) are the most socially vulnerable. Nearly half of households are car-free — entirely transit-dependent.</p></div>
+          </div>
+          <div class="finding-row">
+            <div class="finding-num">02</div>
+            <div class="finding-body"><h4>Bustleton is the corridor's crash hotspot</h4><p>18 serious/fatal crashes in 2024 — nearly 3× the corridor mean of 6.2. Subway-induced car reduction delivers immediate safety co-benefits.</p></div>
+          </div>
+          <div class="finding-row" style="border-bottom:none;">
+            <div class="finding-num">03</div>
+            <div class="finding-body"><h4>Outer stations face a healthcare access crisis</h4><p>Southampton (2.42 km) and Red Lion (1.80 km) are farthest from any healthcare facility. Subway dramatically cuts effective travel time to medical resources.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 10: Public Health Maps -->
+  <div class="page map-page" id="page10">
+    <iframe src="https://uxiaoo22.github.io/roosevelt-subway/" loading="lazy" title="Public Health Maps"></iframe>
+  </div>
+
+  <!-- PAGE 11: Composite Impact Score -->
+  <div class="page" id="page11">
+    <div class="content-page">
+      <div class="chapter-banner" style="background:linear-gradient(135deg,#0f1a2e 0%,#1a2540 100%);">
+        <div class="chapter-num" style="color:#a78bfa;">PART 04 · INTEGRATED OUTCOME</div>
+        <div class="chapter-h">Composite station impact<br>rankings.</div>
+        <div class="chapter-lead">Three dimensions combined into one score: public health need (45%), commercial vitality (35%), and development potential (20%). Click any row to expand.</div>
+      </div>
+      <div class="chapter-body">
+        <div class="stat-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+          <div class="stat-card"><div class="stat-val" style="color:#7c6fcd;">5</div><div class="stat-label">High-impact stations</div><div class="stat-sub">Composite score ≥ 60</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:#7c6fcd;">Broad-Erie</div><div class="stat-label">Top overall station</div><div class="stat-sub">Highest composite score in corridor</div></div>
+          <div class="stat-card"><div class="stat-val" style="color:#7c6fcd;">~61 ac</div><div class="stat-label">Dev-ready land total</div><div class="stat-sub">Across all 12 walksheds</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;gap:14px;font-size:11px;font-family:var(--mono);color:var(--right-muted);">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#185FA5;display:inline-block;"></span>Public health</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>Commercial</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#BA7517;display:inline-block;"></span>Development</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="nav-btn" style="font-size:11px;padding:5px 12px;" onclick="sortStn('composite',this)">Composite</button>
+            <button class="nav-btn" style="font-size:11px;padding:5px 12px;" onclick="sortStn('health',this)">Health</button>
+            <button class="nav-btn" style="font-size:11px;padding:5px 12px;" onclick="sortStn('commercial',this)">Commercial</button>
+            <button class="nav-btn" style="font-size:11px;padding:5px 12px;" onclick="sortStn('development',this)">Development</button>
+          </div>
+        </div>
+        <div class="station-wrap">
+          <table class="stn-table">
+            <thead>
+              <tr>
+                <th>Station</th>
+                <th>Public health</th>
+                <th>Commercial</th>
+                <th>Development</th>
+                <th>Composite ↓</th>
+                <th>Tier</th>
+              </tr>
+            </thead>
+            <tbody id="stnBody"></tbody>
+          </table>
+          <div class="drawer" id="stnDrawer"></div>
+        </div>
+        <p style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--right-muted);">Weights: Public health 45% (SVI 50%, crashes 30%, HC distance 20%) · Commercial vitality 35% · Development potential 20%</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+</div><!-- /.shell -->
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-btn" onclick="go(-1)">← Previous</button>
+  <button class="nav-btn" onclick="go(1)">Next →</button>
+</div>
+
+<script>
+// ── PAGE DATA ──
+const pageData = [
+  {counter:'00 / 12', tag:'INTRO',    tagCls:'intro-tag', title:'Roosevelt Boulevard Subway', desc:'Evaluating the proposed subway option through sustainability, economic development, and public health.', extra:''},
+  {counter:'00 / 12', tag:'INTRO',    tagCls:'intro-tag', title:'Project Logic', desc:'Why evaluate the subway option? Key questions and analysis framework.', extra:''},
+  {counter:'01 / 05', tag:'INTRO',    tagCls:'intro-tag', title:'Sustainability Viewer', desc:'A visual guide showing how proposed subway may improve green-space accessibility and equity.', extra:'<div class="sb-callout">Two questions: who is served, and how much access improves?</div>'},
+  {counter:'01 / 05', tag:'MAP',      tagCls:'map-tag',   title:'Bus Base Map', desc:'If there\'s NO SUBWAY: Existing bus service areas and accessible green spaces.', extra:''},
+  {counter:'02 / 05', tag:'MAP',      tagCls:'map-tag',   title:'Bus Service Metrics', desc:'Use the selector to switch indicators.', extra:'<div class="sb-callout">Black outlines indicate the 52 tracts that have intersection with subway service area.</div><div class="sb-label">METRIC</div>'},
+  {counter:'03–05 / 05', tag:'MAP',   tagCls:'map-tag',   title:'Subway Maps', desc:'Proposed subway 10-min walk service area, subway service metrics, and priority investment score.', extra:''},
+  {counter:'01 / 03', tag:'INTRO',    tagCls:'chart-tag', title:'Economic Development', desc:'Commercial POI density, active food licenses, and real estate development opportunity by station.', extra:''},
+  {counter:'02 / 03', tag:'MAP',      tagCls:'map-tag',   title:'Food & Retail Activity', desc:'Orange = food/restaurant · Blue = retail · ✕ = proposed station · Toggle layers using the sidebar.', extra:''},
+  {counter:'03 / 03', tag:'MAP',      tagCls:'map-tag',   title:'Vacant Development Parcels', desc:'Filter by zone type · Click any parcel for address, acreage & market value.', extra:''},
+  {counter:'01 / 02', tag:'INTRO',    tagCls:'score-tag', title:'Public Health Assessment', desc:'Comparing existing conditions across 12 proposed station areas to identify where the subway would deliver the greatest public health benefit.', extra:''},
+  {counter:'02 / 02', tag:'MAP',      tagCls:'map-tag',   title:'Public Health Maps', desc:'SVI, crash hotspots, and healthcare access — interactive maps for all 12 station walksheds.', extra:''},
+  {counter:'OUTCOME', tag:'SCORE',    tagCls:'score-tag', title:'Composite Impact Score', desc:'Three dimensions combined into one station-level ranking. Click any row to expand the full profile.', extra:'<div class="sb-callout">Weights: Health 45% · Commercial 35% · Development 20%</div>'},
+];
+
+const navMap = {0:'nav0',1:'nav0',2:'nav2',3:'nav2',4:'nav2',5:'nav2',6:'nav6',7:'nav6',8:'nav6',9:'nav9',10:'nav9',11:'nav11'};
+
+let cur = 0;
+const total = 12;
+
+function updateSidebar() {
+  const d = pageData[cur];
+  document.getElementById('sb-counter').textContent = d.counter;
+  const tag = document.getElementById('sb-tag');
+  tag.textContent = d.tag;
+  tag.className = 'sb-type-tag ' + d.tagCls;
+  document.getElementById('sb-title').textContent = d.title;
+  document.getElementById('sb-desc').textContent = d.desc;
+  document.getElementById('sb-extra').innerHTML = d.extra || '';
+  document.querySelectorAll('.sb-nav-item').forEach(el => el.classList.remove('active'));
+  const activeNav = document.getElementById(navMap[cur]);
+  if (activeNav) activeNav.classList.add('active');
+}
+
+function goTo(n) {
+  if (n < 0 || n >= total) return;
+  document.getElementById('page'+cur).classList.remove('active');
+  cur = n;
+  document.getElementById('page'+cur).classList.add('active');
+  updateSidebar();
+}
+
+function go(dir) { goTo(cur + dir); }
+function jumpTo(n) { goTo(n); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); go(1); }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); go(-1); }
+});
+
+// ── COMPOSITE SCORE TABLE ──
+const stations = [
+  {name:'Broad-Erie',  seg:'Inner · Underground', svi:0.975, crashes:7,  hcDist:0.41, pois:210, licenses:85, parcels:332, acres:22.5, insight:'The strongest case for subway investment. Highest social vulnerability in the corridor, dense existing food economy, and the largest block of development-ready land — 22.5 acres primed for TOD.'},
+  {name:'North 9th',   seg:'Inner · Underground', svi:0.953, crashes:6,  hcDist:0.52, pois:145, licenses:54, parcels:28,  acres:4.1,  insight:'Extremely high social need and a solid commercial base. Limited vacant land constrains TOD upside, but subway delivers strong equity benefits regardless.'},
+  {name:'Rising Sun',  seg:'Inner · At-Grade',    svi:0.84,  crashes:9,  hcDist:0.65, pois:168, licenses:62, parcels:19,  acres:2.8,  insight:'Notable crash hotspot above corridor average. Strong existing retail activity — transit would amplify an already vibrant commercial corridor.'},
+  {name:'Adams',       seg:'Mid · Underground',   svi:0.78,  crashes:5,  hcDist:0.88, pois:92,  licenses:31, parcels:45,  acres:8.9,  insight:'Large industrial parcels — including an 8.5-acre site at 5525 Whitaker Ave — make Adams a priority for mixed-use redevelopment.'},
+  {name:'Pratt',       seg:'Mid · Underground',   svi:0.72,  crashes:4,  hcDist:0.76, pois:78,  licenses:28, parcels:22,  acres:3.4,  insight:'Moderate across all three dimensions. Could serve as a connective hub between inner and outer corridor neighborhoods.'},
+  {name:'Bustleton',   seg:'Mid · Underground',   svi:0.65,  crashes:18, hcDist:0.92, pois:155, licenses:58, parcels:18,  acres:2.6,  insight:'The single worst crash hotspot — 18 serious/fatal crashes in 2024, nearly 3× the corridor mean. Subway-induced car reduction yields immediate safety benefits.'},
+  {name:'Cottman',     seg:'Mid · Underground',   svi:0.61,  crashes:12, hcDist:1.05, pois:162, licenses:61, parcels:14,  acres:2.1,  insight:'Second-highest crash count and solid commercial activity. Lower social vulnerability but transit safety benefits are among the strongest in the corridor.'},
+  {name:'Rhawn',       seg:'Outer · Underground', svi:0.54,  crashes:5,  hcDist:1.22, pois:88,  licenses:22, parcels:12,  acres:1.8,  insight:'Transitional station bridging urban and suburban character. Walkshed captures underserved residential areas with poor healthcare proximity.'},
+  {name:'Welsh-Grant', seg:'Outer · Underground', svi:0.48,  crashes:4,  hcDist:1.45, pois:65,  licenses:18, parcels:16,  acres:2.4,  insight:'Connects neighborhoods with limited existing transit options. Healthcare distance is a growing concern approaching the outer corridor.'},
+  {name:'Red Lion',    seg:'Outer · Elevated',    svi:0.42,  crashes:3,  hcDist:1.80, pois:54,  licenses:14, parcels:21,  acres:3.2,  insight:'Healthcare access is the defining challenge — 1.80 km from the nearest facility. Subway dramatically reduces travel time to medical resources.'},
+  {name:'Southampton', seg:'Outer · Elevated',    svi:0.38,  crashes:2,  hcDist:2.42, pois:48,  licenses:11, parcels:25,  acres:4.0,  insight:'Farthest from any healthcare facility (2.42 km). Lower SVI masks a critical access gap that subway would directly address.'},
+  {name:'Old Lincoln', seg:'Terminus · Elevated', svi:0.35,  crashes:1,  hcDist:2.10, pois:32,  licenses:8,  parcels:30,  acres:5.8,  insight:'Terminus with meaningful development land (5.8 ac). Strong potential as a park-and-ride anchor, well-positioned to grow with transit investment.'},
+];
+
+function score(s){
+  const h = s.svi*0.5 + Math.min(s.crashes/18,1)*0.3 + Math.min(s.hcDist/2.42,1)*0.2;
+  const c = Math.min(s.pois/210,1)*0.6 + Math.min(s.licenses/85,1)*0.4;
+  const d = Math.min(s.parcels/332,1)*0.5 + Math.min(s.acres/22.5,1)*0.5;
+  return {health:h, commercial:c, development:d, composite:h*0.45+c*0.35+d*0.20};
+}
+const sData = stations.map(s=>({...s,sc:score(s)}));
+
+function pct(v){return Math.round(v*100);}
+function tier(v){
+  if(v>=0.6) return {l:'High impact',c:'th'};
+  if(v>=0.4) return {l:'Moderate',c:'tm'};
+  return {l:'Lower',c:'tl'};
+}
+function bar(v,col){
+  return `<div class="mini-bar-wrap"><div class="mini-bar" style="width:${Math.round(v*80)}px;background:${col}"></div><span class="sc-num">${pct(v)}</span></div>`;
+}
+
+let openStn = null;
+let srtKey = 'composite', srtDir = -1;
+
+function renderStn(){
+  const sorted=[...sData].sort((a,b)=>{
+    if(srtKey==='name') return a.name.localeCompare(b.name)*srtDir;
+    return (b.sc[srtKey]-a.sc[srtKey])*srtDir;
+  });
+  const tbody=document.getElementById('stnBody');
+  tbody.innerHTML='';
+  document.getElementById('stnDrawer').classList.remove('open');
+  openStn=null;
+  sorted.forEach(s=>{
+    const t=tier(s.sc.composite);
+    const tr=document.createElement('tr');
+    tr.style.cursor='pointer';
+    tr.innerHTML=`
+      <td><span class="stn-name">${s.name}</span><span class="stn-seg">${s.seg}</span></td>
+      <td>${bar(s.sc.health,'#185FA5')}</td>
+      <td>${bar(s.sc.commercial,'#1D9E75')}</td>
+      <td>${bar(s.sc.development,'#BA7517')}</td>
+      <td><span class="score-big">${pct(s.sc.composite)}</span></td>
+      <td><span class="tier-pill ${t.c}">${t.l}</span></td>
+    `;
+    tr.addEventListener('click',()=>openDrawer(s,tr));
+    tbody.appendChild(tr);
+  });
+}
+
+function openDrawer(s,tr){
+  const drw=document.getElementById('stnDrawer');
+  if(openStn===tr){drw.classList.remove('open');openStn=null;return;}
+  openStn=tr;
+  drw.innerHTML=`
+    <span class="drawer-close" onclick="document.getElementById('stnDrawer').classList.remove('open');openStn=null;">✕ close</span>
+    <div class="drawer-head">
+      <span class="drawer-name">${s.name} Station</span>
+      <span class="drawer-composite">Composite: ${pct(s.sc.composite)} / 100</span>
+    </div>
+    <div class="drawer-dims">
+      <div class="dim-box">
+        <div class="db-cat">PUBLIC HEALTH NEED</div>
+        <div class="db-bar" style="width:${pct(s.sc.health)}%;background:#185FA5;max-width:100%"></div>
+        <div class="db-score" style="color:#185FA5">${pct(s.sc.health)}</div>
+        <div class="db-facts">SVI: <strong>${s.svi.toFixed(3)}</strong><br>Crashes (2024): <strong>${s.crashes}</strong><br>HC distance: <strong>${s.hcDist.toFixed(2)} km</strong></div>
+      </div>
+      <div class="dim-box">
+        <div class="db-cat">COMMERCIAL VITALITY</div>
+        <div class="db-bar" style="width:${pct(s.sc.commercial)}%;background:#1D9E75;max-width:100%"></div>
+        <div class="db-score" style="color:#1D9E75">${pct(s.sc.commercial)}</div>
+        <div class="db-facts">OSM POIs: <strong>${s.pois}</strong><br>City licenses: <strong>${s.licenses}</strong></div>
+      </div>
+      <div class="dim-box">
+        <div class="db-cat">DEVELOPMENT POTENTIAL</div>
+        <div class="db-bar" style="width:${pct(s.sc.development)}%;background:#BA7517;max-width:100%"></div>
+        <div class="db-score" style="color:#BA7517">${pct(s.sc.development)}</div>
+        <div class="db-facts">Dev parcels: <strong>${s.parcels}</strong><br>Developable acres: <strong>${s.acres} ac</strong></div>
+      </div>
+    </div>
+    <div class="drawer-insight">${s.insight}</div>
+  `;
+  drw.classList.add('open');
+  drw.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function sortStn(key,btn){
+  if(srtKey===key) srtDir*=-1; else{srtKey=key;srtDir=-1;}
+  renderStn();
+}
+
+renderStn();
+updateSidebar();
+</script>
+</body>
+</html>
